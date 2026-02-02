@@ -88,19 +88,10 @@ async def end(msg: types.Message):
             sheet.update_cell(i + 2, 4, minutes)
 
             await msg.answer("Умничка моя ❤️")
-            await msg.answer(f"Поработала сегодня: {seconds//60} минут")
+            await msg.answer(f"Поработала сегодня: {minutes} минут")
             return
 
     await msg.answer("Ты ещё не начинала 🙄")
-
-    delta = datetime.now() - start
-    seconds = int(delta.total_seconds())
-
-    cur.execute(
-        "INSERT INTO work VALUES (?,?,?,?)",
-        (msg.from_user.id, start.isoformat(), datetime.now().isoformat(), seconds)
-    )
-    db.commit()
 
 @dp.message(Command("week"))
 async def week(msg: types.Message):
