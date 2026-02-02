@@ -1,2 +1,4 @@
 aiogram>=3.4
 flask
+gspread
+google-auth
