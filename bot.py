@@ -115,16 +115,16 @@ async def week(msg: types.Message):
 
 @dp.message(lambda m: "Месяц" in m.text)
 async def month(msg: types.Message):
-    rows = get_user_rows(msg.from_user.id)
+    records = sheet.get_all_records()
 
     now = datetime.now()
     total_minutes = 0
 
-    for r in rows:
-        if r["end"]:
-            start = datetime.strptime(r["start"], "%Y-%m-%d %H:%M:%S")
+    for row in records:
+        if row["end"]:
+            start = datetime.strptime(row["start"], "%Y-%m-%d %H:%M:%S")
             if start.month == now.month and start.year == now.year:
-                total_minutes += int(r["minutes"])
+                total_minutes += int(row["minutes"])
 
     hours = total_minutes // 60
     mins = total_minutes % 60
@@ -134,13 +134,13 @@ async def month(msg: types.Message):
 
 @dp.message(lambda m: "Деньги" in m.text)
 async def money(msg: types.Message):
-    rows = get_user_rows(msg.from_user.id)
+    records = sheet.get_all_records()
 
+    now = datetime.now()
     total_minutes = 0
     rate = 0
-    now = datetime.now()
 
-    for r in rows:
+    for r in records:
         if r.get("rate"):
             rate = int(r["rate"])
 
