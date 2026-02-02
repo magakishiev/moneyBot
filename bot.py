@@ -92,28 +92,6 @@ f"""
 
 @dp.message(lambda m: "Неделя" in m.text)
 async def week(msg: types.Message):
-    records = sheet.get_all_records()
-
-    now = datetime.now()
-    week_start = now - timedelta(days=now.weekday())
-    week_start = week_start.replace(hour=0, minute=0, second=0)
-
-    total_minutes = 0
-
-    for row in records:
-        if str(row["user_id"]) == str(msg.from_user.id) and row["end"]:
-            start = datetime.strptime(row["start"], "%Y-%m-%d %H:%M:%S")
-
-            if start >= week_start:
-                total_minutes += int(row["minutes"])
-
-    hours = total_minutes // 60
-    mins = total_minutes % 60
-
-    await msg.answer(f"За эту неделю ты поработала: {hours} часов {mins} минут")
-
-@dp.message(lambda m: "Неделя" in m.text)
-async def week(msg: types.Message):
     rows = get_user_rows(msg.from_user.id)
 
     now = datetime.now()
