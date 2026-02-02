@@ -1,8 +1,9 @@
 import sqlite3
+import os
 from datetime import datetime
 from aiogram import Bot, Dispatcher, executor, types
 
-TOKEN = "8549410908:AAFC2USkf3j2Zlqsc9Pka-Pkv3L0WzjvMgo"
+TOKEN = os.getenv("TOKEN")
 
 bot = Bot(TOKEN)
 dp = Dispatcher(bot)
