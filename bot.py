@@ -1,4 +1,7 @@
 import os
+import json
+import gspread
+from google.oauth2.service_account import Credentials
 import asyncio
 import sqlite3
 from datetime import datetime
@@ -8,6 +11,17 @@ from aiogram.filters import Command
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 
 TOKEN = os.getenv("TOKEN")
+SHEET_ID = os.getenv("SHEET_ID")
+GOOGLE_CREDENTIALS = os.getenv("GOOGLE_CREDENTIALS")
+
+creds_dict = json.loads(GOOGLE_CREDENTIALS)
+
+scopes = ["https://www.googleapis.com/auth/spreadsheets"]
+credentials = Credentials.from_service_account_info(creds_dict, scopes=scopes)
+
+gc = gspread.authorize(credentials)
+sheet = gc.open_by_key(SHEET_ID).sheet1
+
 
 bot = Bot(TOKEN)
 dp = Dispatcher()
@@ -48,15 +62,36 @@ async def start(msg: types.Message):
 
 @dp.message(lambda m: "Начинаю" in m.text)
 async def begin(msg: types.Message):
-    active[msg.from_user.id] = datetime.now()
-    await msg.answer("Легкой работы ашкым 😘")
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
+    sheet.append_row([
+        msg.from_user.id,
+        now,
+        "",
+        ""
+    ])
+
+    await msg.answer("Легкой работы ашкым 😘")
+    
 @dp.message(lambda m: "Закончила" in m.text)
 async def end(msg: types.Message):
-    start = active.get(msg.from_user.id)
-    if not start:
-        await msg.answer("Ты ещё не начинала 🙄")
-        return
+    records = sheet.get_all_records()
+
+    for i in range(len(records) - 1, -1, -1):
+        row = records[i]
+        if str(row["user_id"]) == str(msg.from_user.id) and row["end"] == "":
+            start_time = datetime.strptime(row["start"], "%Y-%m-%d %H:%M:%S")
+            end_time = datetime.now()
+            minutes = int((end_time - start_time).total_seconds() / 60)
+
+            sheet.update_cell(i + 2, 3, end_time.strftime("%Y-%m-%d %H:%M:%S"))
+            sheet.update_cell(i + 2, 4, minutes)
+
+            await msg.answer("Умничка моя ❤️")
+            await msg.answer(f"Поработала сегодня: {seconds//60} минут")
+            return
+
+    await msg.answer("Ты ещё не начинала 🙄")
 
     delta = datetime.now() - start
     seconds = int(delta.total_seconds())
@@ -66,9 +101,6 @@ async def end(msg: types.Message):
         (msg.from_user.id, start.isoformat(), datetime.now().isoformat(), seconds)
     )
     db.commit()
-
-    await msg.answer("Умничка моя ❤️")
-    await msg.answer(f"Поработала сегодня: {seconds//60} минут")
 
 @dp.message(Command("week"))
 async def week(msg: types.Message):
