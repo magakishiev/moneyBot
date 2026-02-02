@@ -3,7 +3,7 @@ import json
 import gspread
 from google.oauth2.service_account import Credentials
 import asyncio
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
@@ -31,7 +31,15 @@ active = {}
 
 kb = ReplyKeyboardMarkup(
     keyboard=[
-        [KeyboardButton(text="🟢 Начинаю"), KeyboardButton(text="🔴 Закончила")]
+        [
+            KeyboardButton(text="🟢 Начинаю"),
+            KeyboardButton(text="🔴 Закончила")
+        ],
+        [
+            KeyboardButton(text="📅 Неделя"),
+            KeyboardButton(text="🗓 Месяц"),
+            KeyboardButton(text="💰 Деньги")
+        ]
     ],
     resize_keyboard=True
 )
@@ -73,28 +81,38 @@ async def end(msg: types.Message):
 
     await msg.answer("Ты ещё не начинала 🙄")
 
-@dp.message(Command("week"))
+
+@dp.message(lambda m: "Неделя" in m.text)
 async def week(msg: types.Message):
     records = sheet.get_all_records()
-    total_minutes = 0
 
     now = datetime.now()
+    week_start = now - timedelta(days=now.weekday())
+    week_start = week_start.replace(hour=0, minute=0, second=0)
+
+    total_minutes = 0
 
     for row in records:
         if str(row["user_id"]) == str(msg.from_user.id) and row["end"]:
             start = datetime.strptime(row["start"], "%Y-%m-%d %H:%M:%S")
 
-            if (now - start).days <= 7:
+            if start >= week_start:
                 total_minutes += int(row["minutes"])
 
-    await msg.answer(f"За неделю поработала: {round(total_minutes/60,2)} часов")
+    hours = total_minutes // 60
+    mins = total_minutes % 60
 
-@dp.message(Command("month"))
+    await msg.answer(f"За эту неделю поработала: {hours}ч {mins}м")
+
+
+
+@dp.message(lambda m: "Месяц" in m.text)
 async def month(msg: types.Message):
     rows = get_user_rows(msg.from_user.id)
 
     now = datetime.now()
     total_minutes = 0
+    hours = total_minutes // 60
 
     for r in rows:
         if r["end"]:
@@ -102,7 +120,45 @@ async def month(msg: types.Message):
             if start.month == now.month and start.year == now.year:
                 total_minutes += int(r["minutes"])
 
-    await msg.answer(f"За месяц поработала: {round(total_minutes/60,2)} часов")
+    await msg.answer(f"За месяц поработала: {round(hours,2)} часов")
+
+
+@dp.message(lambda m: "Деньги" in m.text)
+async def money(msg: types.Message):
+    rows = get_user_rows(msg.from_user.id)
+
+    total_minutes = 0
+    rate = 0
+    hours = total_minutes // 60
+    mins = total_minutes % 60
+
+    now = datetime.now()
+
+    for r in rows:
+        if r.get("rate"):
+            rate = int(r["rate"])
+
+        if r["end"]:
+            start = datetime.strptime(r["start"], "%Y-%m-%d %H:%M:%S")
+            if start.month == now.month and start.year == now.year:
+                total_minutes += int(r["minutes"])
+
+    total = (hours) * rate
+    await msg.answer(f"Заработала за месяц: {round(total,2)} тенге")
+    await msg.answer(
+f"""
+🌸 Отчёт
+
+За месяц ты поработала:
+⏱ {hours}ч {mins}м
+
+Заработала:
+💰 {money} тенге
+
+Горжусь ❤️
+"""
+)
+
 
 
 @dp.message(Command("salary"))
@@ -119,28 +175,6 @@ async def salary(msg: types.Message):
 
     sheet.append_row([msg.from_user.id,"","","",rate])
     await msg.answer("Ставка сохранена")
-
-
-@dp.message(Command("money"))
-async def money(msg: types.Message):
-    rows = get_user_rows(msg.from_user.id)
-
-    total_minutes = 0
-    rate = 0
-
-    now = datetime.now()
-
-    for r in rows:
-        if r.get("rate"):
-            rate = int(r["rate"])
-
-        if r["end"]:
-            start = datetime.strptime(r["start"], "%Y-%m-%d %H:%M:%S")
-            if start.month == now.month and start.year == now.year:
-                total_minutes += int(r["minutes"])
-
-    total = (total_minutes/60) * rate
-    await msg.answer(f"Заработала за месяц: {round(total,2)} тенге")
 
 async def main():
     await dp.start_polling(bot)
