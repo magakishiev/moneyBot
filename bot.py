@@ -3,7 +3,6 @@ import json
 import gspread
 from google.oauth2.service_account import Credentials
 import asyncio
-import sqlite3
 from datetime import datetime
 
 from aiogram import Bot, Dispatcher, types
@@ -21,31 +20,13 @@ credentials = Credentials.from_service_account_info(creds_dict, scopes=scopes)
 
 gc = gspread.authorize(credentials)
 sheet = gc.open_by_key(SHEET_ID).sheet1
+def get_user_rows(user_id):
+    rows = sheet.get_all_records()
+    return [r for r in rows if str(r["user_id"]) == str(user_id)]
 
 
 bot = Bot(TOKEN)
 dp = Dispatcher()
-
-db = sqlite3.connect("work.db")
-cur = db.cursor()
-
-cur.execute("""
-CREATE TABLE IF NOT EXISTS work (
-user INTEGER,
-start TEXT,
-end TEXT,
-seconds INTEGER
-)
-""")
-
-cur.execute("""
-CREATE TABLE IF NOT EXISTS salary (
-user INTEGER PRIMARY KEY,
-rate INTEGER
-)
-""")
-
-db.commit()
 
 active = {}
 
@@ -104,28 +85,55 @@ async def week(msg: types.Message):
 
 @dp.message(Command("month"))
 async def month(msg: types.Message):
-    cur.execute("""
-    SELECT SUM(seconds) FROM work
-    WHERE user=? AND strftime('%Y-%m', start)=strftime('%Y-%m','now')
-    """,(msg.from_user.id,))
-    s = cur.fetchone()[0] or 0
-    await msg.answer(f"За месяц поработала: {round(s/3600,2)} часов")
+    rows = get_user_rows(msg.from_user.id)
+
+    now = datetime.now()
+    total_minutes = 0
+
+    for r in rows:
+        if r["end"]:
+            start = datetime.strptime(r["start"], "%Y-%m-%d %H:%M:%S")
+            if start.month == now.month and start.year == now.year:
+                total_minutes += int(r["minutes"])
+
+    await msg.answer(f"За месяц поработала: {round(total_minutes/60,2)} часов")
+
 
 @dp.message(Command("salary"))
 async def salary(msg: types.Message):
     rate = int(msg.text.split()[1])
-    cur.execute("REPLACE INTO salary VALUES (?,?)",(msg.from_user.id,rate))
-    db.commit()
+
+    rows = sheet.get_all_records()
+
+    for i, r in enumerate(rows):
+        if str(r["user_id"]) == str(msg.from_user.id):
+            sheet.update_cell(i+2,5,rate)
+            await msg.answer("Ставка сохранена")
+            return
+
+    sheet.append_row([msg.from_user.id,"","","",rate])
     await msg.answer("Ставка сохранена")
+
 
 @dp.message(Command("money"))
 async def money(msg: types.Message):
-    cur.execute("SELECT SUM(seconds) FROM work WHERE user=?",(msg.from_user.id,))
-    sec = cur.fetchone()[0] or 0
-    cur.execute("SELECT rate FROM salary WHERE user=?",(msg.from_user.id,))
-    row = cur.fetchone()
-    rate = row[0] if row else 0
-    total = sec/3600 * rate
+    rows = get_user_rows(msg.from_user.id)
+
+    total_minutes = 0
+    rate = 0
+
+    now = datetime.now()
+
+    for r in rows:
+        if r.get("rate"):
+            rate = int(r["rate"])
+
+        if r["end"]:
+            start = datetime.strptime(r["start"], "%Y-%m-%d %H:%M:%S")
+            if start.month == now.month and start.year == now.year:
+                total_minutes += int(r["minutes"])
+
+    total = (total_minutes/60) * rate
     await msg.answer(f"Заработала за месяц: {round(total,2)} тенге")
 
 async def main():
