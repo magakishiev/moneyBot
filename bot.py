@@ -71,12 +71,20 @@ async def end(msg: types.Message):
             start_time = datetime.strptime(row["start"], "%Y-%m-%d %H:%M:%S")
             end_time = datetime.now()
             minutes = int((end_time - start_time).total_seconds() / 60)
+            hours = minutes // 60
+            mins = minutes % 60
 
             sheet.update_cell(i + 2, 3, end_time.strftime("%Y-%m-%d %H:%M:%S"))
             sheet.update_cell(i + 2, 4, minutes)
 
-            await msg.answer("Умничка моя ❤️")
-            await msg.answer(f"Поработала сегодня: {minutes} минут")
+            await msg.answer(
+f"""
+Поработала сегодня: {hours} часов {mins} минут
+
+Умничка моя ❤️
+Теперь отдыхай 🥰
+"""
+)
             return
 
     await msg.answer("Ты ещё не начинала 🙄")
@@ -102,8 +110,7 @@ async def week(msg: types.Message):
     hours = total_minutes // 60
     mins = total_minutes % 60
 
-    await msg.answer(f"За эту неделю поработала: {hours}ч {mins}м")
-
+    await msg.answer(f"За эту неделю ты поработала: {hours} часов {mins} минут")
 
 
 @dp.message(lambda m: "Месяц" in m.text)
@@ -113,6 +120,7 @@ async def month(msg: types.Message):
     now = datetime.now()
     total_minutes = 0
     hours = total_minutes // 60
+    mins = total_minutes % 60
 
     for r in rows:
         if r["end"]:
@@ -120,7 +128,7 @@ async def month(msg: types.Message):
             if start.month == now.month and start.year == now.year:
                 total_minutes += int(r["minutes"])
 
-    await msg.answer(f"За месяц поработала: {round(hours,2)} часов")
+    await msg.answer(f"За этот месяц поработала: {(hours)} часов {mins} минут")
 
 
 @dp.message(lambda m: "Деньги" in m.text)
@@ -143,22 +151,21 @@ async def money(msg: types.Message):
             if start.month == now.month and start.year == now.year:
                 total_minutes += int(r["minutes"])
 
-    total = (hours) * rate
-    await msg.answer(f"Заработала за месяц: {round(total,2)} тенге")
+    total = (hours) * rate + (mins * rate) // 60
     await msg.answer(
 f"""
 🌸 Отчёт
 
 За месяц ты поработала:
-⏱ {hours}ч {mins}м
+⏱ {hours} часов {mins} минут
 
 Заработала:
-💰 {money} тенге
+💰 {total} тенге
 
 Горжусь ❤️
+P.S. Только не потрать все сразу 😂
 """
 )
-
 
 
 @dp.message(Command("salary"))
