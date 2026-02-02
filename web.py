@@ -9,7 +9,6 @@ def home():
     return "Bot is running"
 
 if __name__ == "__main__":
-    # запускаем бота отдельным процессом
     subprocess.Popen(["python", "bot.py"])
 
     port = int(os.environ.get("PORT", 10000))

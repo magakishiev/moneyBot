@@ -121,10 +121,11 @@ async def month(msg: types.Message):
     total_minutes = 0
 
     for row in records:
-        if row["end"]:
-            start = datetime.strptime(row["start"], "%Y-%m-%d %H:%M:%S")
-            if start.month == now.month and start.year == now.year:
-                total_minutes += int(row["minutes"])
+     if str(row["user_id"]) == str(msg.from_user.id) and row["end"]:
+        start = datetime.strptime(row["start"], "%Y-%m-%d %H:%M:%S")
+        if start.month == now.month and start.year == now.year:
+            total_minutes += int(row["minutes"])
+
 
     hours = total_minutes // 60
     mins = total_minutes % 60
@@ -141,6 +142,8 @@ async def money(msg: types.Message):
     rate = 0
 
     for r in records:
+     if str(r["user_id"]) == str(msg.from_user.id):
+
         if r.get("rate"):
             rate = int(r["rate"])
 
@@ -148,6 +151,7 @@ async def money(msg: types.Message):
             start = datetime.strptime(r["start"], "%Y-%m-%d %H:%M:%S")
             if start.month == now.month and start.year == now.year:
                 total_minutes += int(r["minutes"])
+
 
     hours = total_minutes // 60
     mins = total_minutes % 60
