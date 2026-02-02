@@ -119,8 +119,6 @@ async def month(msg: types.Message):
 
     now = datetime.now()
     total_minutes = 0
-    hours = total_minutes // 60
-    mins = total_minutes % 60
 
     for r in rows:
         if r["end"]:
@@ -128,7 +126,10 @@ async def month(msg: types.Message):
             if start.month == now.month and start.year == now.year:
                 total_minutes += int(r["minutes"])
 
-    await msg.answer(f"За этот месяц поработала: {(hours)} часов {mins} минут")
+    hours = total_minutes // 60
+    mins = total_minutes % 60
+
+    await msg.answer(f"За этот месяц поработала: {hours} часов {mins} минут")
 
 
 @dp.message(lambda m: "Деньги" in m.text)
@@ -137,9 +138,6 @@ async def money(msg: types.Message):
 
     total_minutes = 0
     rate = 0
-    hours = total_minutes // 60
-    mins = total_minutes % 60
-
     now = datetime.now()
 
     for r in rows:
@@ -151,18 +149,23 @@ async def money(msg: types.Message):
             if start.month == now.month and start.year == now.year:
                 total_minutes += int(r["minutes"])
 
-    total = (hours) * rate + (mins * rate) // 60
+    hours = total_minutes // 60
+    mins = total_minutes % 60
+
+    total = round((total_minutes / 60) * rate, 2)
+
     await msg.answer(
 f"""
 🌸 Отчёт
 
 За месяц ты поработала:
-⏱ {hours} часов {mins} минут
+⏳ {hours} часов {mins} минут
 
 Заработала:
 💰 {total} тенге
 
 Горжусь ❤️
+
 P.S. Только не потрать все сразу 😂
 """
 )
