@@ -112,25 +112,76 @@ async def week(msg: types.Message):
 
     await msg.answer(f"За эту неделю ты поработала: {hours} часов {mins} минут")
 
+@dp.message(lambda m: "Неделя" in m.text)
+async def week(msg: types.Message):
+    rows = get_user_rows(msg.from_user.id)
+
+    now = datetime.now()
+    week_start = now - timedelta(days=now.weekday())
+    week_start = week_start.replace(hour=0, minute=0, second=0)
+
+    days = {}
+
+    for r in rows:
+        if r["end"]:
+            start = datetime.strptime(r["start"], "%Y-%m-%d %H:%M:%S")
+
+            if start >= week_start:
+                d = start.strftime("%d.%m")
+                days[d] = days.get(d, 0) + int(r["minutes"])
+
+    text = "📅 За эту неделю:\n\n"
+    total = 0
+
+    for d in sorted(days):
+        mins = days[d]
+        h = mins // 60
+        m = mins % 60
+        text += f"{d} — {h}ч {m}м\n"
+        total += mins
+
+    th = total // 60
+    tm = total % 60
+
+    text += f"\n────────────\nИтого: {th} часов {tm} минут\n\nТак держать милая 😽"
+
+    await msg.answer(text)
+
 
 @dp.message(lambda m: "Месяц" in m.text)
 async def month(msg: types.Message):
-    records = sheet.get_all_records()
+    rows = get_user_rows(msg.from_user.id)
 
     now = datetime.now()
-    total_minutes = 0
+    first_day = now.replace(day=1)
 
-    for row in records:
-     if str(row["user_id"]) == str(msg.from_user.id) and row["end"]:
-        start = datetime.strptime(row["start"], "%Y-%m-%d %H:%M:%S")
-        if start.month == now.month and start.year == now.year:
-            total_minutes += int(row["minutes"])
+    weeks = {}
 
+    for r in rows:
+        if r["end"]:
+            start = datetime.strptime(r["start"], "%Y-%m-%d %H:%M:%S")
 
-    hours = total_minutes // 60
-    mins = total_minutes % 60
+            if start.month == now.month and start.year == now.year:
+                week_num = ((start.day - 1) // 7) + 1
+                weeks[week_num] = weeks.get(week_num, 0) + int(r["minutes"])
 
-    await msg.answer(f"В этом месяце ты поработала: {hours} часов {mins} минут")
+    text = f"🗓 {now.strftime('%B')}:\n\n"
+    total = 0
+
+    for w in sorted(weeks):
+        mins = weeks[w]
+        h = mins // 60
+        m = mins % 60
+        text += f"Неделя {w} — {h}ч {m}м\n"
+        total += mins
+
+    th = total // 60
+    tm = total % 60
+
+    text += f"\n────────────\nИтого: {th} часов {tm} минут\n\nТак держать милая 😽"
+
+    await msg.answer(text)
+
 
 
 @dp.message(lambda m: "Деньги" in m.text)
