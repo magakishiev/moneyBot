@@ -24,7 +24,6 @@ def get_user_rows(user_id):
     rows = sheet.get_all_records()
     return [r for r in rows if str(r["user_id"]) == str(user_id)]
 
-
 bot = Bot(TOKEN)
 dp = Dispatcher()
 
@@ -76,12 +75,19 @@ async def end(msg: types.Message):
 
 @dp.message(Command("week"))
 async def week(msg: types.Message):
-    cur.execute("""
-    SELECT SUM(seconds) FROM work
-    WHERE user=? AND start >= datetime('now','-7 days')
-    """,(msg.from_user.id,))
-    s = cur.fetchone()[0] or 0
-    await msg.answer(f"За неделю: {round(s/3600,2)} часов")
+    records = sheet.get_all_records()
+    total_minutes = 0
+
+    now = datetime.now()
+
+    for row in records:
+        if str(row["user_id"]) == str(msg.from_user.id) and row["end"]:
+            start = datetime.strptime(row["start"], "%Y-%m-%d %H:%M:%S")
+
+            if (now - start).days <= 7:
+                total_minutes += int(row["minutes"])
+
+    await msg.answer(f"За неделю поработала: {round(total_minutes/60,2)} часов")
 
 @dp.message(Command("month"))
 async def month(msg: types.Message):
