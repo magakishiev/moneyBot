@@ -54,6 +54,13 @@ async def start(msg: types.Message):
 
 @dp.message(lambda m: "Начинаю" in m.text)
 async def begin(msg: types.Message):
+    records = sheet.get_all_records()
+
+    for r in records:
+        if str(r["user_id"]) == str(msg.from_user.id) and not r.get("end"):
+            await msg.answer("Ты уже на смене 🙄")
+            return
+
     now = datetime.now(TZ).strftime(TIME_FORMAT)
 
     sheet.append_row([
@@ -64,6 +71,7 @@ async def begin(msg: types.Message):
     ])
 
     await msg.answer("Легкой работы ашкым 😘")
+
     
 @dp.message(lambda m: "Закончила" in m.text)
 async def end(msg: types.Message):
