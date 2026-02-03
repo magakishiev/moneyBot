@@ -13,8 +13,9 @@ from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 TOKEN = os.getenv("TOKEN")
 SHEET_ID = os.getenv("SHEET_ID")
 GOOGLE_CREDENTIALS = os.getenv("GOOGLE_CREDENTIALS")
-TZ = ZoneInfo("Asia/Almaty")
 TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
+TZ = ZoneInfo("Asia/Almaty")
+print(datetime.now(TZ))
 
 creds_dict = json.loads(GOOGLE_CREDENTIALS)
 
