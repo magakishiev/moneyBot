@@ -4,6 +4,7 @@ import gspread
 from google.oauth2.service_account import Credentials
 import asyncio
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
@@ -12,6 +13,8 @@ from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 TOKEN = os.getenv("TOKEN")
 SHEET_ID = os.getenv("SHEET_ID")
 GOOGLE_CREDENTIALS = os.getenv("GOOGLE_CREDENTIALS")
+TZ = ZoneInfo("Asia/Almaty")
+TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
 
 creds_dict = json.loads(GOOGLE_CREDENTIALS)
 
@@ -50,7 +53,7 @@ async def start(msg: types.Message):
 
 @dp.message(lambda m: "Начинаю" in m.text)
 async def begin(msg: types.Message):
-    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    now = datetime.now(TZ).strftime(TIME_FORMAT)
 
     sheet.append_row([
         msg.from_user.id,
@@ -68,23 +71,26 @@ async def end(msg: types.Message):
     for i in range(len(records) - 1, -1, -1):
         row = records[i]
         if str(row["user_id"]) == str(msg.from_user.id) and row["end"] == "":
-            start_time = datetime.strptime(row["start"], "%Y-%m-%d %H:%M:%S")
-            end_time = datetime.now()
-            minutes = int((end_time - start_time).total_seconds() / 60)
+            start = datetime.strptime(
+            row["start"],
+            TIME_FORMAT
+            ).replace(tzinfo=TZ)
+            end = datetime.now(TZ)
+            minutes = int((end - start).total_seconds() / 60)
             hours = minutes // 60
             mins = minutes % 60
 
-            sheet.update_cell(i + 2, 3, end_time.strftime("%Y-%m-%d %H:%M:%S"))
+            sheet.update_cell(i + 2, 3, end.strftime(TIME_FORMAT))
             sheet.update_cell(i + 2, 4, minutes)
 
             await msg.answer(
-f"""
-Поработала сегодня: {hours} часов {mins} минут
+            f"""
+            Поработала сегодня: {hours} часов {mins} минут
 
-Умничка моя ❤️
-Теперь отдыхай 🥰
-"""
-)
+            Умничка моя ❤️
+            Теперь отдыхай 🥰
+            """
+            )
             return
 
     await msg.answer("Ты ещё не начинала 🙄")
@@ -94,7 +100,7 @@ f"""
 async def week(msg: types.Message):
     rows = get_user_rows(msg.from_user.id)
 
-    now = datetime.now()
+    now = datetime.now(TZ)
     week_start = now - timedelta(days=now.weekday())
     week_start = week_start.replace(hour=0, minute=0, second=0)
 
@@ -102,7 +108,10 @@ async def week(msg: types.Message):
 
     for r in rows:
         if r["end"]:
-            start = datetime.strptime(r["start"], "%Y-%m-%d %H:%M:%S")
+            start = datetime.strptime(
+            r["start"],
+            TIME_FORMAT
+            ).replace(tzinfo=TZ)
 
             if start >= week_start:
                 d = start.strftime("%d.%m")
@@ -130,14 +139,17 @@ async def week(msg: types.Message):
 async def month(msg: types.Message):
     rows = get_user_rows(msg.from_user.id)
 
-    now = datetime.now()
+    now = datetime.now(TZ)
     first_day = now.replace(day=1)
 
     weeks = {}
 
     for r in rows:
         if r["end"]:
-            start = datetime.strptime(r["start"], "%Y-%m-%d %H:%M:%S")
+            start = datetime.strptime(
+            r["start"],
+            TIME_FORMAT
+            ).replace(tzinfo=TZ)
 
             if start.month == now.month and start.year == now.year:
                 week_num = ((start.day - 1) // 7) + 1
@@ -166,7 +178,7 @@ async def month(msg: types.Message):
 async def money(msg: types.Message):
     records = sheet.get_all_records()
 
-    now = datetime.now()
+    now = datetime.now(TZ)
     total_minutes = 0
     rate = 0
 
@@ -177,7 +189,10 @@ async def money(msg: types.Message):
             rate = int(r["rate"])
 
         if r["end"]:
-            start = datetime.strptime(r["start"], "%Y-%m-%d %H:%M:%S")
+            start = datetime.strptime(
+            r["start"],
+            TIME_FORMAT
+            ).replace(tzinfo=TZ)
             if start.month == now.month and start.year == now.year:
                 total_minutes += int(r["minutes"])
 
